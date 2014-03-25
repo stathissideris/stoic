@@ -15,4 +15,7 @@
                                                                       javax.jms/jms
                                                                       org.slf4j/slf4j-log4j12
                                                                       log4j]]
-                 [environ "0.4.0"]])
+                 [environ "0.4.0"]
+
+                 [com.stuartsierra/component "0.2.1"]
+                 [org.clojure/core.async "0.1.278.0-76b25b-alpha"]])
