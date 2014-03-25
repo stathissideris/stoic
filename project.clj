@@ -3,4 +3,16 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.5.1"]])
+  :dependencies [[org.clojure/clojure "1.5.1"]
+
+                 [zookeeper-clj "0.9.1" :exclusions [org.apache.zookeeper/zookeeper
+;;                                                     commons-codec
+                                                     ]]
+
+                 [org.apache.zookeeper/zookeeper "3.4.5" :exclusions [;;commons-codec
+                                                                      com.sun.jmx/jmxri
+                                                                      com.sun.jdmk/jmxtools
+                                                                      javax.jms/jms
+                                                                      org.slf4j/slf4j-log4j12
+                                                                      log4j]]
+                 [environ "0.4.0"]])
