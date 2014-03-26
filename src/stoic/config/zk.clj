@@ -1,4 +1,5 @@
 (ns stoic.config.zk
+  "Namespace to faciliate Stoic interaction with Zookeeper."
   (:require [environ.core :as environ]
             [zookeeper :as zk]
             [zookeeper.data :as zk-data]
@@ -33,7 +34,7 @@
   (let [v (:version (zk/exists client path))]
     (zk/set-data client path (serialize-form m) v)))
 
-(defn- read-from-zk [client path]
+(defn read-from-zk [client path]
   (deserialize-form (:data (zk/data client path))))
 
 (defn path-for [root k]
@@ -41,21 +42,20 @@
 
 (defrecord ZkConfigSupplier [client root]
   stoic.protocols.config-supplier/ConfigSupplier
-  (fetch [this k watcher-fn]
-    (let [path (path-for root k)]
 
+  (fetch [this k]
+    (let [path (path-for root k)]
       (when-not (zk/exists client path)
         (zk/create-all client path :persistent? true))
+      (read-from-zk client path)))
 
-      ;; Add a watcher to keep the atom updated and trigger custom watcher
-      (when watcher-fn
-        (zk/exists client path :watcher
-                   (fn the-watcher [event]
-                     (when (= :NodeDataChanged (:event-type event))
-                       (watcher-fn)
-                       (zk/exists client path :watcher the-watcher)))))
-
-      (deserialize-form (:data (zk/data client path))))))
+  (watch! [this k watcher-fn]
+    (let [path (path-for root k)]
+      (zk/exists client path :watcher
+                 (fn the-watcher [event]
+                   (when (= :NodeDataChanged (:event-type event))
+                     (watcher-fn)
+                     (zk/exists client path :watcher the-watcher)))))))
 
 (defn zk-config-supplier []
   (ZkConfigSupplier. (connect) (zk-root)))
