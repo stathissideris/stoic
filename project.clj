@@ -18,4 +18,11 @@
                  [environ "0.4.0"]
 
                  [com.stuartsierra/component "0.2.1"]
-                 [org.clojure/core.async "0.1.278.0-76b25b-alpha"]])
+                 [org.clojure/core.async "0.1.278.0-76b25b-alpha"]]
+  :plugins [[s3-wagon-private "1.1.2"]]
+  :repositories {"snapshots" {:url "s3p://m2repo.agentsmutual.co.uk/snapshots/"
+                              :username "AKIAID5JFTF7UKTEQVJQ"
+                              :passphrase "p4j9dh7ftxXOk8DxkaQVk+/tJNm0181CpABq6skj"}
+                 "releases" {:url "s3p://m2repo.agentsmutual.co.uk/releases/"
+                             :username "AKIAID5JFTF7UKTEQVJQ"
+                             :passphrase "p4j9dh7ftxXOk8DxkaQVk+/tJNm0181CpABq6skj"}})
