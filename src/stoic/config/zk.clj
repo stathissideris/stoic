@@ -18,6 +18,9 @@
   (zk/connect (zk-ips)
               :timeout-msec 10000))
 
+(defn close [client]
+  (zk/close client))
+
 (defn serialize-form
   "Serializes a Clojure form to a byte-array."
   ([form]
