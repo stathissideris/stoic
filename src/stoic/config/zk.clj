@@ -3,7 +3,8 @@
   (:require [environ.core :as environ]
             [zookeeper :as zk]
             [zookeeper.data :as zk-data]
-            [stoic.protocols.config-supplier]))
+            [stoic.protocols.config-supplier]
+            [clojure.tools.logging :as log]))
 
 (defn zk-ips
   "Zookeeper IPs."
@@ -57,6 +58,7 @@
       (zk/exists client path :watcher
                  (fn the-watcher [event]
                    (when (= :NodeDataChanged (:event-type event))
+                     (log/info "Data changed, firing watcher" event)
                      (watcher-fn)
                      (zk/exists client path :watcher the-watcher)))))))
 
