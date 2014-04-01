@@ -6,10 +6,9 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
 
                  [zookeeper-clj "0.9.1" :exclusions [org.apache.zookeeper/zookeeper
-;;                                                     commons-codec
-                                                     ]]
+                                                     log4j]]
 
-                 [org.apache.zookeeper/zookeeper "3.4.5" :exclusions [;;commons-codec
+                 [org.apache.zookeeper/zookeeper "3.4.5" :exclusions [commons-codec
                                                                       com.sun.jmx/jmxri
                                                                       com.sun.jdmk/jmxtools
                                                                       javax.jms/jms
