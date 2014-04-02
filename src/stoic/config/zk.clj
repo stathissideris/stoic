@@ -4,7 +4,8 @@
             [zookeeper :as zk]
             [zookeeper.data :as zk-data]
             [stoic.protocols.config-supplier]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [com.stuartsierra.component :as component]))
 
 (defn zk-ips
   "Zookeeper IPs."
@@ -44,16 +45,26 @@
 (defn path-for [root k]
   (format "/stoic/%s/components/%s" (name root) (name k)))
 
-(defrecord ZkConfigSupplier [client root]
+(defrecord ZkConfigSupplier [root]
   stoic.protocols.config-supplier/ConfigSupplier
+  component/Lifecycle
 
-  (fetch [this k]
+  (start [{:keys [client] :as this}]
+    (log/info "Connecting to ZK")
+    (if client this (assoc this :client (connect))))
+
+  (stop [{:keys [client]}]
+    (when client
+      (log/info "Disconnecting from ZK")
+      (close client)))
+
+  (fetch [{:keys [client]} k]
     (let [path (path-for root k)]
       (when-not (zk/exists client path)
         (zk/create-all client path :persistent? true))
       (read-from-zk client path)))
 
-  (watch! [this k watcher-fn]
+  (watch! [{:keys [client]} k watcher-fn]
     (let [path (path-for root k)]
       (zk/exists client path :watcher
                  (fn the-watcher [event]
@@ -63,4 +74,4 @@
                      (zk/exists client path :watcher the-watcher)))))))
 
 (defn zk-config-supplier []
-  (ZkConfigSupplier. (connect) (zk-root)))
+  (ZkConfigSupplier. (zk-root)))
