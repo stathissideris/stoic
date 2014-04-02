@@ -5,6 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
 
+                 [org.clojure/tools.logging "0.2.6"]
+
                  [zookeeper-clj "0.9.1" :exclusions [org.apache.zookeeper/zookeeper
                                                      log4j]]
 
