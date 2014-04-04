@@ -39,9 +39,11 @@
 
 (defn bootstrap
   "Bootstrap a component system from the supplied component registry."
-  [registry]
-  (let [config-supplier-component (component/start (choose-supplier))
-        component-settings (fetch-settings config-supplier-component registry)
-        components (create-components registry component-settings)]
-    (bounce-components-if-config-changes! config-supplier-component components component-settings)
-    (component/start (apply component/system-map (reduce into [:stoic-config config-supplier-component] components)))))
+  ([registry]
+     (bootstrap (choose-supplier) registry))
+  ([config-supplier registry]
+     (let [config-supplier-component (component/start config-supplier)
+           component-settings (fetch-settings config-supplier-component registry)
+           components (create-components registry component-settings)]
+       (bounce-components-if-config-changes! config-supplier-component components component-settings)
+       (component/start (apply component/system-map (reduce into [:stoic-config config-supplier-component] components))))))
