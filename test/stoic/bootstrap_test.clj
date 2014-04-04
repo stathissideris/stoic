@@ -1,12 +1,12 @@
 (ns stoic.bootstrap-test
   (:use [clojure.core.async :only [chan timeout >!! <!! buffer alts!!]])
-  (:require [stoic.config.zk :refer :all]
+  (:require [stoic.config.zk :as stoic-zk]
             [clojure.test :refer :all]
             [stoic.protocols.config-supplier :as cs]
             [com.stuartsierra.component :as component]
             [stoic.bootstrap :as b]))
 
-(defrecord TestComponent [starts stops]
+(defrecord TestAsyncComponent [starts stops]
   component/Lifecycle
 
   (start [{:keys [settings]}]
@@ -15,26 +15,57 @@
   (stop [{:keys [settings]}]
     (>!! stops (:a @settings))))
 
-;; TODO test components with dependencies get injectedyo
+(defmacro harness [& body]
+  `(let [~'client (stoic-zk/connect)]
+     (try
+       ~@body
+       (finally
+         (stoic-zk/close ~'client)))))
 
 (deftest can-bounce-component-on-config-change
-  (let [starts (chan (buffer 1))
-        stops (chan (buffer 1))
-        client (connect)]
-    (add-to-zk client (path-for :default :test) {:a :initial-value})
+  (harness
+   (stoic-zk/add-to-zk client (stoic-zk/path-for :default :test) {:a :initial-value})
 
-    (component/start
-     (b/bootstrap
-      (component/system-map :foo (->TestComponent starts stops))))
+   (let [starts (chan (buffer 1))
+         stops (chan (buffer 1))]
+     (component/start
+      (b/bootstrap
+       (component/system-map :test (->TestAsyncComponent starts stops))))
 
-    (is (= :initial-value (first (alts!! [(timeout 2000) starts]))))
+     (is (= :initial-value (first (alts!! [(timeout 2000) starts]))))
 
-    (add-to-zk client (path-for :default :test) {:a :b})
+     (stoic-zk/add-to-zk client (stoic-zk/path-for :default :test) {:a :b})
 
-    (is (= :initial-value (first (alts!! [(timeout 2000) stops]))))
-    (is (= :b (first (alts!! [(timeout 2000) starts]))))
+     (is (= :initial-value (first (alts!! [(timeout 2000) stops]))))
+     (is (= :b (first (alts!! [(timeout 2000) starts]))))
 
-    (add-to-zk client (path-for :default :test) {:a :c})
+     (stoic-zk/add-to-zk client (stoic-zk/path-for :default :test) {:a :c})
 
-    (is (= :b (first (alts!! [(timeout 2000) stops]))))
-    (is (= :c (first (alts!! [(timeout 2000) starts]))))))
+     (is (= :b (first (alts!! [(timeout 2000) stops]))))
+     (is (= :c (first (alts!! [(timeout 2000) starts])))))))
+
+(defrecord TestComponent [s]
+  component/Lifecycle
+  (start [this]
+    this)
+  (stop [this]))
+
+(defrecord TestDependentComponent [s funk]
+  component/Lifecycle
+  (start [this]
+    this)
+  (stop [this]))
+
+(deftest component-with-dependencies-get-injected
+  (harness
+   (stoic-zk/add-to-zk client (stoic-zk/path-for :default :test1) {:a :test-1-value})
+   (stoic-zk/add-to-zk client (stoic-zk/path-for :default :test2) {:a :test-2-value})
+
+   (let [system (component/start
+                 (b/bootstrap
+                  (component/system-map :test1 (map->TestComponent {:s "sad"})
+                                        :test2 (component/using
+                                                (map->TestDependentComponent {:s "fo"})
+                                                [:test1]))))]
+
+     (is (= :test-1-value (-> system :test2 :test1 :settings deref :a))))))
