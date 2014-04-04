@@ -12,11 +12,6 @@
   "Inject components associating in the respective settings as an atom.
    Returns a new SystemMap."
   [component-settings system]
-
-  (println (reduce into []
-               (for [[k c] system]
-                 [k (assoc c :settings (get component-settings k))])))
-
   (apply component/system-map
          (reduce into []
                  (for [[k c] system]
@@ -52,8 +47,6 @@
      (let [config-supplier-component (component/start config-supplier)
            component-settings (fetch-settings config-supplier-component system)
            system (inject-components component-settings system)]
-       (println system)
-       (println "done")
        (bounce-components-if-config-changes!
         config-supplier-component system component-settings)
        (assoc system :stoic-config config-supplier-component))))
