@@ -5,22 +5,27 @@
             [stoic.protocols.config-supplier :as cs]
             [stoic.config.zk]))
 
-(def registry [[:foo stoic.components.foo/->Foo]])
-
 (defn- choose-supplier []
   (stoic.config.zk/zk-config-supplier))
 
-(defn- create-components
-  "Creates components passing a settings atom into each constructor."
-  [registry component-settings]
-  (into {}
-        (for [[k c-c] registry :let [settings (get component-settings k)]]
-          [k (c-c settings)])))
+(defn- inject-components
+  "Inject components associating in the respective settings as an atom.
+   Returns a new SystemMap."
+  [component-settings system]
+
+  (println (reduce into []
+               (for [[k c] system]
+                 [k (assoc c :settings (get component-settings k))])))
+
+  (apply component/system-map
+         (reduce into []
+                 (for [[k c] system]
+                   [k (assoc c :settings (get component-settings k))]))))
 
 (defn- fetch-settings
   "Fetch settings from the config supplier and wrap in atoms."
-  [config-supplier registry]
-  (into {} (for [[k] registry]
+  [config-supplier system]
+  (into {} (for [[k] system]
              [k (atom (cs/fetch config-supplier k))])))
 
 (defn- bounce-component! [config-supplier k c settings-atom]
@@ -38,12 +43,17 @@
                (partial bounce-component! config-supplier k c settings-atom))))
 
 (defn bootstrap
-  "Bootstrap a component system from the supplied component registry."
-  ([registry]
-     (bootstrap (choose-supplier) registry))
-  ([config-supplier registry]
+  "Inject system with settings fetched from a config-supplier.
+   Components will be bounced when their respective settings change.
+   Returns a SystemMap with Stoic config attached."
+  ([system]
+     (bootstrap (choose-supplier) system))
+  ([config-supplier system]
      (let [config-supplier-component (component/start config-supplier)
-           component-settings (fetch-settings config-supplier-component registry)
-           components (create-components registry component-settings)]
-       (bounce-components-if-config-changes! config-supplier-component components component-settings)
-       (component/start (apply component/system-map (reduce into [:stoic-config config-supplier-component] components))))))
+           component-settings (fetch-settings config-supplier-component system)
+           system (inject-components component-settings system)]
+       (println system)
+       (println "done")
+       (bounce-components-if-config-changes!
+        config-supplier-component system component-settings)
+       (assoc system :stoic-config config-supplier-component))))
